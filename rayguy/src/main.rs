@@ -3,10 +3,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-mod color;
 mod math;
 
-use color::{Color, BLUE, GREEN, RED, WHITE, YELLOW};
+use ezbuffer::WrapBuffer;
+use ezbuffer::{Color, BLUE, GREEN, RED, WHITE, YELLOW};
 use math::Vec2;
 use winit::{
     dpi::LogicalSize,
@@ -20,6 +20,10 @@ const TEST_LEVEL_HEIGHT: usize = 24;
 
 const SCREEN_WIDTH: u32 = 640;
 const SCREEN_HEIGHT: u32 = 480;
+
+// Gameboy resolution:)
+const SURFACE_WIDTH: u32 = 160;
+const SURFACE_HEIGHT: u32 = 144;
 
 #[rustfmt::skip]
 const TEST_LEVEL: [[u8; TEST_LEVEL_WIDTH]; TEST_LEVEL_HEIGHT] = [
@@ -61,39 +65,6 @@ const WALL_TEXTURE: [[u32; 8]; 8] = [
     [0xff, 0xff,   0xff,   0xff,     0xff,     0xff,   0xff,   0xff],
 ];
 
-#[allow(dead_code)]
-fn set_pixel_unchecked(
-    buffer: &mut softbuffer::Buffer,
-    width: usize,
-    x: usize,
-    y: usize,
-    val: u32,
-) {
-    buffer[width * y + x] = val;
-}
-
-fn set_pixel(buffer: &mut softbuffer::Buffer, width: usize, x: usize, y: usize, val: u32) {
-    let index = width * y + x;
-    if index < buffer.len() {
-        buffer[index] = val;
-    }
-}
-
-fn vert_line(
-    buffer: &mut softbuffer::Buffer,
-    width: usize,
-    x: usize,
-    draw_start: usize,
-    draw_end: usize,
-    color: Color,
-) {
-    let start = draw_start.min(draw_end);
-    let end = draw_start.max(draw_end);
-    let pixel = color.as_pixel();
-    for y in start..end + 1 {
-        set_pixel(buffer, width, x, y, pixel);
-    }
-}
 fn get_time() -> u128 {
     use std::time::{SystemTime, UNIX_EPOCH};
     let stop = SystemTime::now()
@@ -153,6 +124,14 @@ fn main() {
 
                 let mut buffer = surface.buffer_mut().unwrap();
                 buffer.fill(0);
+
+                let mut buf = WrapBuffer::new(
+                    buffer,
+                    (SURFACE_WIDTH as usize, SURFACE_HEIGHT as usize),
+                    (width as usize, height as usize),
+                );
+                let (width, height) = (SURFACE_WIDTH, SURFACE_HEIGHT);
+
                 for x in 0..width {
                     // https://lodev.org/cgtutor/raycasting.html:
                     // " cameraX is the x-coordinate on the camera plane that the current x-coordinate of the screen represents,
@@ -242,7 +221,7 @@ fn main() {
                         hit_point.x - hit_point.x as i32 as f64,
                         hit_point.y - hit_point.y as i32 as f64,
                     );
-                    let strip = if side == 1 {
+                    let strip = if side == 0 {
                         (hit_relative.x * 8.) as usize
                     } else {
                         (hit_relative.y * 8.) as usize
@@ -266,43 +245,36 @@ fn main() {
                     };
 
                     // texture rendering i guess?
-                    for y in draw_start..draw_end {
-                        let color_index = (8 * y / line_height).clamp(0, 7) as usize;
-                        let mut color = colors[color_index];
-                        if side == 1 {
-                            let r = ((color & 0xff0000) >> 16) / 2;
-                            let g = ((color & 0xff00) >> 8) / 2;
-                            let b = (color & 0xff) / 2;
-                            color = (r << 16) | (g << 8) | b;
-                        }
-                        set_pixel(&mut buffer, width as usize, x as usize, y as usize, color);
-                    }
-
-                    // let mut color = match TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] {
-                    //     1 => RED,
-                    //     2 => GREEN,
-                    //     3 => BLUE,
-                    //     4 => WHITE,
-                    //     _ => YELLOW,
-                    // };
-
-                    // if side == 1 {
-                    //     match color {
-                    //         Color::Rgb(r, g, b) => color = Color::Rgb(r / 2, g / 2, b / 2),
+                    // for y in draw_start..draw_end {
+                    //     let color_index = (8 * y / line_height).clamp(0, 7) as usize;
+                    //     let mut color = colors[color_index];
+                    //     if side == 1 {
+                    //         let r = ((color & 0xff0000) >> 16) / 2;
+                    //         let g = ((color & 0xff00) >> 8) / 2;
+                    //         let b = (color & 0xff) / 2;
+                    //         color = (r << 16) | (g << 8) | b;
                     //     }
+                    //     buf.set_raw(x as usize, y as usize, color);
                     // }
 
-                    // vert_line(
-                    //     &mut buffer,
-                    //     width as usize,
-                    //     x as usize,
-                    //     draw_start as usize,
-                    //     draw_end as usize,
-                    //     color,
-                    // );
+                    let mut color = match TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] {
+                        1 => RED,
+                        2 => GREEN,
+                        3 => BLUE,
+                        4 => WHITE,
+                        _ => YELLOW,
+                    };
+
+                    if side == 1 {
+                        match color {
+                            Color::Rgb(r, g, b) => color = Color::Rgb(r / 2, g / 2, b / 2),
+                        }
+                    }
+
+                    buf.vert_line(x as usize, draw_start as usize, draw_end as usize, color);
                 }
 
-                buffer.present().unwrap();
+                buf.present().unwrap();
 
                 let move_speed = frame_time as f64 * 2. / 1000.;
                 let rot_speed = frame_time as f64 * 1.5 / 1000. * std::f64::consts::PI;

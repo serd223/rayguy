@@ -1,5 +1,5 @@
 [package]
-name = "rayguy"
+name = "ezbuffer"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 softbuffer = "0.3.0"
-winit = "0.28.6"
