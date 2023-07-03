@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 softbuffer = "0.3.0"
-ezbuffer = { path = "../ezbuffer" }
+ezbuffer = { git = "https://github.com/serd223/ezbuffer.git" }
 winit = "0.28.6"
