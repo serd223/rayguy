@@ -10,6 +10,11 @@ impl Vec2 {
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
+    pub fn rotate(&mut self, radian: f64) {
+        let old_x = self.x;
+        self.x = self.x * radian.cos() - self.y * radian.sin();
+        self.y = old_x * radian.sin() + self.y * radian.cos();
+    }
 }
 
 impl Add for Vec2 {

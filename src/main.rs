@@ -24,6 +24,8 @@ const SCREEN_HEIGHT: u32 = 480;
 // Gameboy resolution:)
 const SURFACE_WIDTH: u32 = 160;
 const SURFACE_HEIGHT: u32 = 144;
+// const SURFACE_WIDTH: u32 = 320;
+// const SURFACE_HEIGHT: u32 = 240;
 
 #[rustfmt::skip]
 const TEST_LEVEL: [[u8; TEST_LEVEL_WIDTH]; TEST_LEVEL_HEIGHT] = [
@@ -125,6 +127,12 @@ fn main() {
                 let mut buffer = surface.buffer_mut().unwrap();
                 buffer.fill(0);
 
+                // let mut buf = WrapBuffer::new(
+                //     buffer,
+                //     (width as usize, height as usize),
+                //     (width as usize, height as usize),
+                // );
+
                 let mut buf = WrapBuffer::new(
                     buffer,
                     (SURFACE_WIDTH as usize, SURFACE_HEIGHT as usize),
@@ -216,7 +224,10 @@ fn main() {
                         side_dist.y - delta_dist.y
                     };
 
-                    let hit_point = ray_dir * perp_wall_dist;
+                    let hit_point = &(&ray_dir
+                        * (1. / (ray_dir.x * ray_dir.x + ray_dir.y * ray_dir.y))
+                        * perp_wall_dist)
+                        + &pos;
                     let hit_relative = Vec2::new(
                         hit_point.x - hit_point.x as i32 as f64,
                         hit_point.y - hit_point.y as i32 as f64,
@@ -245,39 +256,39 @@ fn main() {
                     };
 
                     // texture rendering i guess?
-                    // for y in draw_start..draw_end {
-                    //     let color_index = (8 * y / line_height).clamp(0, 7) as usize;
-                    //     let mut color = colors[color_index];
-                    //     if side == 1 {
-                    //         let r = ((color & 0xff0000) >> 16) / 2;
-                    //         let g = ((color & 0xff00) >> 8) / 2;
-                    //         let b = (color & 0xff) / 2;
-                    //         color = (r << 16) | (g << 8) | b;
-                    //     }
-                    //     buf.set_raw(x as usize, y as usize, color);
-                    // }
-
-                    let mut color = match TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] {
-                        1 => RED,
-                        2 => GREEN,
-                        3 => BLUE,
-                        4 => WHITE,
-                        _ => YELLOW,
-                    };
-
-                    if side == 1 {
-                        match color {
-                            Color::Rgb(r, g, b) => color = Color::Rgb(r / 2, g / 2, b / 2),
+                    for y in draw_start..draw_end {
+                        let color_index = (8 * (y - draw_start) / line_height).clamp(0, 7) as usize;
+                        let mut color = colors[color_index];
+                        if side == 1 {
+                            let r = ((color & 0xff0000) >> 16) / 2;
+                            let g = ((color & 0xff00) >> 8) / 2;
+                            let b = (color & 0xff) / 2;
+                            color = (r << 16) | (g << 8) | b;
                         }
+                        buf.set_raw(x as usize, y as usize, color);
                     }
 
-                    buf.vert_line(x as usize, draw_start as usize, draw_end as usize, color);
+                    // let mut color = match TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] {
+                    //     1 => RED,
+                    //     2 => GREEN,
+                    //     3 => BLUE,
+                    //     4 => WHITE,
+                    //     _ => YELLOW,
+                    // };
+
+                    // if side == 1 {
+                    //     match color {
+                    //         Color::Rgb(r, g, b) => color = Color::Rgb(r / 2, g / 2, b / 2),
+                    //     }
+                    // }
+
+                    // buf.vert_line(x as usize, draw_start as usize, draw_end as usize, color);
                 }
 
                 buf.present().unwrap();
 
                 let move_speed = frame_time as f64 * 2. / 1000.;
-                let rot_speed = frame_time as f64 * 1.5 / 1000. * std::f64::consts::PI;
+                let rot_speed = frame_time as f64 * 0.85 / 1000. * std::f64::consts::PI;
 
                 if pressed_keys[VirtualKeyCode::Up as usize] {
                     if TEST_LEVEL[(pos.x + dir.x * move_speed) as usize][pos.y as usize] == 0 {
@@ -296,20 +307,12 @@ fn main() {
                     }
                 }
                 if pressed_keys[VirtualKeyCode::Right as usize] {
-                    let old_dir_x = dir.x;
-                    dir.x = dir.x * (-rot_speed).cos() - dir.y * (-rot_speed).sin();
-                    dir.y = old_dir_x * (-rot_speed).sin() + dir.y * (-rot_speed).cos();
-                    let old_plane_x = plane.x;
-                    plane.x = plane.x * (-rot_speed).cos() - plane.y * (-rot_speed).sin();
-                    plane.y = old_plane_x * (-rot_speed).sin() + plane.y * (-rot_speed).cos();
+                    dir.rotate(-rot_speed);
+                    plane.rotate(-rot_speed);
                 }
                 if pressed_keys[VirtualKeyCode::Left as usize] {
-                    let old_dir_x = dir.x;
-                    dir.x = dir.x * (rot_speed).cos() - dir.y * (rot_speed).sin();
-                    dir.y = old_dir_x * (rot_speed).sin() + dir.y * (rot_speed).cos();
-                    let old_plane_x = plane.x;
-                    plane.x = plane.x * (rot_speed).cos() - plane.y * (rot_speed).sin();
-                    plane.y = old_plane_x * (rot_speed).sin() + plane.y * (rot_speed).cos();
+                    dir.rotate(rot_speed);
+                    plane.rotate(rot_speed);
                 }
             }
 
