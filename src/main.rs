@@ -3,10 +3,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod consts;
 mod math;
+use consts::*;
 
 use ezbuffer::WrapBuffer;
-use ezbuffer::{Color, BLUE, GREEN, RED, WHITE, YELLOW};
+// use ezbuffer::{Color, BLUE, GREEN, RED, WHITE, YELLOW};
 use math::Vec2;
 use winit::{
     dpi::LogicalSize,
@@ -14,58 +16,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-
-const TEST_LEVEL_WIDTH: usize = 24;
-const TEST_LEVEL_HEIGHT: usize = 24;
-
-const SCREEN_WIDTH: u32 = 640;
-const SCREEN_HEIGHT: u32 = 480;
-
-// Gameboy resolution:)
-const SURFACE_WIDTH: u32 = 160;
-const SURFACE_HEIGHT: u32 = 144;
-// const SURFACE_WIDTH: u32 = 320;
-// const SURFACE_HEIGHT: u32 = 240;
-
-#[rustfmt::skip]
-const TEST_LEVEL: [[u8; TEST_LEVEL_WIDTH]; TEST_LEVEL_HEIGHT] = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,2,2,2,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1],
-  [1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,3,0,0,0,3,0,0,0,1],
-  [1,0,0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,2,2,0,2,2,0,0,0,0,3,0,3,0,3,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,0,0,0,0,5,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,0,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
-
-#[rustfmt::skip]
-const WALL_TEXTURE: [[u32; 8]; 8] = [
-    [0xff, 0xff,   0xff,   0xff,     0xff,     0xff,   0xff,   0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff00, 0xff00, 0xff0000, 0xff0000, 0xff00, 0xff00, 0xff],
-    [0xff, 0xff,   0xff,   0xff,     0xff,     0xff,   0xff,   0xff],
-];
 
 fn get_time() -> u128 {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -95,6 +45,30 @@ fn main() {
     let mut frame_time = 0u64;
 
     let mut pressed_keys = [false; 256];
+
+    // TEMPORARY CODE TO GENERATE TEXTURES TODO remove later
+    let mut texture = vec![vec![0u32; (TEXTURE_WIDTH * TEXTURE_HEIGHT) as usize]; 8];
+    for x in 0..TEXTURE_WIDTH {
+        for y in 0..TEXTURE_HEIGHT {
+            let xor_color = (x * 256 / TEXTURE_WIDTH) ^ (y * 256 / TEXTURE_HEIGHT);
+            //int xcolor = x * 256 / texWidth;
+            let y_color = y * 256 / TEXTURE_HEIGHT;
+            let xy_color = y * 128 / TEXTURE_HEIGHT + x * 128 / TEXTURE_WIDTH;
+            texture[0][(TEXTURE_WIDTH * y + x) as usize] =
+                65536 * 254 * ((x != y) && x != (TEXTURE_WIDTH - y)) as u32; //flat red texture with black cross
+            texture[1][(TEXTURE_WIDTH * y + x) as usize] =
+                xy_color + 256 * xy_color + 65536 * xy_color; //sloped greyscale
+            texture[2][(TEXTURE_WIDTH * y + x) as usize] = 256 * xy_color + 65536 * xy_color; //sloped yellow gradient
+            texture[3][(TEXTURE_WIDTH * y + x) as usize] =
+                xor_color + 256 * xor_color + 65536 * xor_color; //xor greyscale
+            texture[4][(TEXTURE_WIDTH * y + x) as usize] = 256 * xor_color; //xor green
+            texture[5][(TEXTURE_WIDTH * y + x) as usize] =
+                65536 * 192 * ((x % 16 != 0) && (y % 16 != 0)) as u32; //red bricks
+            texture[6][(TEXTURE_WIDTH * y + x) as usize] = 65536 * y_color; //red gradient
+            texture[7][(TEXTURE_WIDTH * y + x) as usize] = 128 + 256 * 128 + 65536 * 128;
+            //flat grey texture
+        }
+    }
     event_loop.run(move |event, _, control_flow| {
         // Hard cap at 144 FPS
         *control_flow = ControlFlow::WaitUntil(
@@ -224,48 +198,58 @@ fn main() {
                         side_dist.y - delta_dist.y
                     };
 
-                    let hit_point = &(&ray_dir
-                        * (1. / (ray_dir.x * ray_dir.x + ray_dir.y * ray_dir.y))
-                        * perp_wall_dist)
-                        + &pos;
-                    let hit_relative = Vec2::new(
-                        hit_point.x - hit_point.x as i32 as f64,
-                        hit_point.y - hit_point.y as i32 as f64,
-                    );
-                    let strip = if side == 0 {
-                        (hit_relative.x * 8.) as usize
-                    } else {
-                        (hit_relative.y * 8.) as usize
-                    };
-                    let colors = &WALL_TEXTURE[strip];
-
                     let line_height = (width as f64 / perp_wall_dist) as i32;
                     let draw_start = {
                         let mut y = -line_height / 2 + height as i32 / 2;
                         if y < 0 {
                             y = 0;
                         }
-                        y
+                        y as usize
                     };
                     let draw_end = {
                         let mut y = line_height / 2 + height as i32 / 2;
                         if y >= height as i32 {
                             y = height as i32 - 1;
                         }
-                        y
+                        y as usize
                     };
 
-                    // texture rendering i guess?
-                    for y in draw_start..draw_end {
-                        let color_index = (8 * (y - draw_start) / line_height).clamp(0, 7) as usize;
-                        let mut color = colors[color_index];
-                        if side == 1 {
-                            let r = ((color & 0xff0000) >> 16) / 2;
-                            let g = ((color & 0xff00) >> 8) / 2;
-                            let b = (color & 0xff) / 2;
-                            color = (r << 16) | (g << 8) | b;
+                    // - 1 so that texture 0 can be used
+                    let tex_num = TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] - 1;
+
+                    let wall_x = {
+                        // in my version x and y were flipped, which is probably one of the reasons why it didnt work
+                        if side == 0 {
+                            pos.y + perp_wall_dist * ray_dir.y
+                        } else {
+                            pos.x + perp_wall_dist * ray_dir.x
                         }
-                        buf.set_raw(x as usize, y as usize, color);
+                    };
+                    let wall_x = wall_x - wall_x.floor(); // basically what i did previously
+
+                    let texture_x = (wall_x * (TEXTURE_WIDTH as f64)) as u32;
+                    let texture_x = {
+                        if side == 0 && ray_dir.x > 0. || side == 1 && ray_dir.y < 0. {
+                            TEXTURE_WIDTH - texture_x - 1
+                        } else {
+                            texture_x
+                        }
+                    };
+
+                    let step = 1. * TEXTURE_HEIGHT as f64 / line_height as f64;
+                    let mut tex_pos =
+                        (draw_start as f64 - height as f64 / 2. + line_height as f64 / 2.) * step;
+
+                    for y in draw_start..draw_end {
+                        let texture_y = tex_pos as usize & (TEXTURE_HEIGHT as usize - 1);
+                        tex_pos += step;
+                        let mut color = texture[tex_num as usize]
+                            [TEXTURE_HEIGHT as usize * texture_y + texture_x as usize];
+                        if side == 1 {
+                            // 8355711 is the decimal value of 0b00000000011111110111111101111111 which is the mask we use the divide all 3 values by 2
+                            color = (color >> 1) & 8355711;
+                        };
+                        buf.set_raw(x as usize, y, color);
                     }
 
                     // let mut color = match TEST_LEVEL[map_pos.x as usize][map_pos.y as usize] {
@@ -288,6 +272,13 @@ fn main() {
                 buf.present().unwrap();
 
                 let move_speed = frame_time as f64 * 2. / 1000.;
+                let move_speed = {
+                    if pressed_keys[VirtualKeyCode::Space as usize] {
+                        move_speed * 2.5
+                    } else {
+                        move_speed
+                    }
+                };
                 let rot_speed = frame_time as f64 * 0.85 / 1000. * std::f64::consts::PI;
 
                 if pressed_keys[VirtualKeyCode::Up as usize] {
