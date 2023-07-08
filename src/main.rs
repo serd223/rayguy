@@ -114,6 +114,65 @@ fn main() {
                 );
                 let (width, height) = (SURFACE_WIDTH, SURFACE_HEIGHT);
 
+                // Floor
+                for y in 0..height {
+                    let ray_dir_leftmost = &dir - &plane;
+                    let ray_dir_rightmost = &dir + &plane;
+
+                    let horizon_distance = y - height / 2;
+                    let horizon_distance = horizon_distance as f64;
+
+                    // Camera vertical position
+                    let pos_z = height as f64 * 0.5;
+
+                    // If you were to put a point in front of the camera that is with a
+                    // horizontal distance of 1 and a vertical distance of horizon_distance and extend it
+                    // to hit the floor (make the vertical distance equal to pos_z) you would multiply the vector by
+                    // pos_z / p which would make the horizontal distance 1 * pos_z / p = pos_z / p
+                    let row_distance = pos_z / horizon_distance;
+
+                    let floor_step =
+                        (&ray_dir_rightmost - &ray_dir_leftmost) * (row_distance / width as f64);
+
+                    let mut floor = &pos + &(ray_dir_leftmost * row_distance);
+
+                    for x in 0..width {
+                        let (cell_x, cell_y) = (floor.x as usize, floor.y as usize);
+
+                        let texture_x = (TEXTURE_WIDTH as f64 * (floor.x - cell_x as f64)) as usize
+                            & (TEST_LEVEL_WIDTH - 1);
+                        let texture_y = (TEXTURE_HEIGHT as f64 * (floor.y - cell_y as f64))
+                            as usize
+                            & (TEST_LEVEL_HEIGHT - 1);
+
+                        floor.x += floor_step.x;
+                        floor.y += floor_step.y;
+
+                        let mut floor_texture = if (cell_x + cell_y) % 2 == 0 { 2 } else { 4 };
+                        if cell_x < 24 && cell_y < 24 {
+                            if TEST_LEVEL[cell_x][cell_y] < 0 {
+                                floor_texture = -TEST_LEVEL[cell_x][cell_y] as usize;
+                            }
+                        }
+                        // let ceiling_texture = 4;
+                        let ceiling_texture = 7 - floor_texture;
+
+                        // Floor
+                        let color =
+                            texture[floor_texture][TEXTURE_WIDTH as usize * texture_y + texture_x];
+                        let color = (color >> 1) & 8355711;
+                        buf.set_raw(x as usize, y as usize, color);
+
+                        // Ceiling (symmetrical)
+
+                        let color = texture[ceiling_texture]
+                            [TEXTURE_WIDTH as usize * texture_y + texture_x];
+                        let color = (color >> 1) & 8355711;
+                        buf.set_raw(x as usize, (height - y - 1) as usize, color);
+                    }
+                }
+
+                // Walls
                 for x in 0..width {
                     // https://lodev.org/cgtutor/raycasting.html:
                     // " cameraX is the x-coordinate on the camera plane that the current x-coordinate of the screen represents,
@@ -282,18 +341,18 @@ fn main() {
                 let rot_speed = frame_time as f64 * 0.85 / 1000. * std::f64::consts::PI;
 
                 if pressed_keys[VirtualKeyCode::Up as usize] {
-                    if TEST_LEVEL[(pos.x + dir.x * move_speed) as usize][pos.y as usize] == 0 {
+                    if TEST_LEVEL[(pos.x + dir.x * move_speed) as usize][pos.y as usize] <= 0 {
                         pos.x += dir.x * move_speed;
                     }
-                    if TEST_LEVEL[pos.x as usize][(pos.y + dir.y * move_speed) as usize] == 0 {
+                    if TEST_LEVEL[pos.x as usize][(pos.y + dir.y * move_speed) as usize] <= 0 {
                         pos.y += dir.y * move_speed;
                     }
                 }
                 if pressed_keys[VirtualKeyCode::Down as usize] {
-                    if TEST_LEVEL[(pos.x - dir.x * move_speed) as usize][pos.y as usize] == 0 {
+                    if TEST_LEVEL[(pos.x - dir.x * move_speed) as usize][pos.y as usize] <= 0 {
                         pos.x -= dir.x * move_speed;
                     }
-                    if TEST_LEVEL[pos.x as usize][(pos.y - dir.y * move_speed) as usize] == 0 {
+                    if TEST_LEVEL[pos.x as usize][(pos.y - dir.y * move_speed) as usize] <= 0 {
                         pos.y -= dir.y * move_speed;
                     }
                 }

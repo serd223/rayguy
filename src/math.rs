@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug)]
 pub struct Vec2 {
@@ -30,6 +30,14 @@ impl Add for &Vec2 {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self::Output::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl Sub for &Vec2 {
+    type Output = Vec2;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y)
     }
 }
 
