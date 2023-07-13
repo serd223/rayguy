@@ -299,7 +299,7 @@ fn main() {
                     let mut tex_pos =
                         (draw_start as f64 - height as f64 / 2. + line_height as f64 / 2.) * step;
 
-                    for y in draw_start..draw_end {
+                    for y in draw_start..draw_end+1 {
                         let texture_y = tex_pos as usize & (TEXTURE_HEIGHT as usize - 1);
                         tex_pos += step;
                         let mut color = texture[tex_num as usize]
